@@ -36,7 +36,7 @@ intervalls6 = {'15 Min': 6, '30 Min': 12, '45 Min': 18, '60 Min': 24, '1 Std:15 
 
 def workdays():
     start = firstcurrentM
-    end = lastcurrentM
+    end = today_date
     days = []
     excluded = (6, 7)
 
@@ -45,6 +45,8 @@ def workdays():
             days.append(start)
         start += timedelta(days=1)
     #return days
+    daysint = []
+    for i in days:
+        daysint.append(i.day)
 
-    print(start, end, days)
-    print(firstcurrentM)
+    return daysint
