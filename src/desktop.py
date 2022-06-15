@@ -1,8 +1,10 @@
 from PyQt6.QtWidgets import (QHBoxLayout,
-                             QVBoxLayout)
+                             QVBoxLayout,
+                             QFileDialog)
 
 from src.MainLayout import MainWindow, ArvenButton, InputArve, ComboArve, ArveLabel
 from src.config import currentConfig
+from src.EditMdt import EditMdt
 
 tier = currentConfig.getcurrent_tier(currentConfig())
 
@@ -96,9 +98,9 @@ class Desktop(MainWindow):
             self.Button_Aktenverwaltung.setDisabled(True)
 
     def openMdtListe(self):
-        from Arvensteyn import Switch
-        Switch.pageNr(self=Switch, extension=2)
-
+        MdtListe = EditMdt()
+        MdtListe.showMaximized()
+        self.close()
 
     def openAuftragliste(self):
         from Arvensteyn import Switch

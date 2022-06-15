@@ -1,4 +1,4 @@
-from src.data import DBModelMdt
+from src.data import DBModelMdt, MandantEditmodel, MandantListe, GV_model, REE_model, HumanSearch
 from src.MainLayout import *
 from PyQt6.QtWidgets import (
                              QHBoxLayout,
@@ -10,11 +10,19 @@ from PyQt6.QtWidgets import (
                              QSizePolicy,
                              QTextEdit,
                              QCompleter,
-                             QDataWidgetMapper
-                             )
+                             QDataWidgetMapper,
+                             QComboBox
+                            )
+from PyQt6.QtSql import (QSqlQuery,
+                         QSqlRecord, QSqlRelationalDelegate
+                         )
+import logging
 
+
+from src.aux_data import EditableMdtModel
 from PyQt6 import QtCore
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QModelIndex
+from src.InputHumans import Human, Human_Selection
 
 Anreden = ["Frau", "Herr", "Frau Dr.", "Herr Dr.", "Frau Prof. Dr.", "Herr Prof. Dr."]
 Positionen = ["Geschäftsführerin", "Geschäftsführer", "Mitglied des Vorstands"]
@@ -23,24 +31,19 @@ Bundeslaender = ['Baden-Württemberg', 'Bayern', 'Berlin', 'Brandenburg', 'Breme
                  'Rheinland-Pfalz', 'Saarland', 'Sachsen', 'Sachsen-Anhalt', 'Schleswig-Holstein', 'Thüringen']
 Staaten = ["Deutschland", "EU (außer Deutschland)", "Außerhalb EU"]
 
+gwg = {"Keine Anhaltspunkte für Geldwäscheverdacht" : 1,
+       "Prüfung von Anhaltspunkten auf Geldwäscheverdacht erfolglos (Vermerk)" : 2,
+       "Geldwäscheverdacht kann nicht beseitigt werden, Manda(n)t wird abgelehnt oder beendet" : 3}
 
 
 
-mapper = QDataWidgetMapper()
-mapper.setModel(DBModelMdt())
 
 
-def setMapper(indexMdt):
-    for i in range(DBModelMdt.rowCount()):
-        if DBModelMdt.record(i).value(0) == indexMdt:
-            mapper.setCurrentIndex(i)
 
 
 class EditMdt(MainWindow):
     def __init__(self):
         super(EditMdt, self).__init__()
-
-
         self.setWindowTitle("Stammblatt Mandanten bearbeiten")
 
 
@@ -48,19 +51,15 @@ class EditMdt(MainWindow):
         self.searchLayout = QVBoxLayout()
         self.searchLabel_mdt = ArveLabel('notice', "Bitte Mandanten auswählen...")
         self.searchLine_mdt = InputArve('hier eingeben')
-        self.search_button = ArvenButton("ausgewählten Mandanten bearbeiten")
+        self.search_table = ArvenTable()
+        self.search_model = MandantListe()
+        self.search_table.setModel(self.search_model)
+        self.search_table.setColumnHidden(1, True)
 
+         # setup layout for searchfield
         self.searchLayout.addWidget(self.searchLabel_mdt)
         self.searchLayout.addWidget(self.searchLine_mdt)
-        self.searchLayout.addWidget(self.search_button)
-        self.searchLayout.addSpacerItem(self.spacerV)
-
-        self.completer_search = QCompleter()
-        self.completer_search.setModel(DBModelMdt)
-        self.completer_search.setCompletionColumn(1)
-
-        self.completer_search.setCaseSensitivity(QtCore.Qt.CaseSensitivity.CaseInsensitive)
-        self.searchLine_mdt.setCompleter(self.completer_search)
+        self.searchLayout.addWidget(self.search_table)
 
         # setup field for data-editing
         self.scrollSpace = QScrollArea()
@@ -74,6 +73,9 @@ class EditMdt(MainWindow):
         self.block_e = Berufsrecht()
         self.block_f = Abrechnung()
         self.block_g = Options()
+        self.humanleash = ''
+        self.block_n = Human_Selection(prozess="neu")
+        self.block_m = Human_Selection(prozess="neu")
         self.scrollGrid.addWidget(self.block_a, 0, 0)
         self.scrollGrid.addWidget(self.block_b, 1, 0)
         self.scrollGrid.addWidget(self.block_c, 2, 0)
@@ -81,37 +83,113 @@ class EditMdt(MainWindow):
         self.scrollGrid.addWidget(self.block_f, 1, 1)
         self.scrollGrid.addWidget(self.block_g, 2, 1)
 
-        self.MdtNrInt = None
+        # setup three QDataWidgetmappers and Models
+
+        self.mapper_mdt = QDataWidgetMapper()
+        self.mappermodel_mdt = MandantEditmodel('NULL')
+        self.mapper_gv = QDataWidgetMapper()
+        self.mappermodel_gv = GV_model('NULL')
+        self.mapper_REE = QDataWidgetMapper()
+        self.mappermodel_re = REE_model('NULL')
+        self.add_mapping()
 
         self.MainHorizontalLayout = QHBoxLayout()
 
         self.MainVerticalLayout.addLayout(self.MainHorizontalLayout)
 
         ### SIGNALS
-        self.completer_search.activated[QtCore.QModelIndex].connect(self.indexmap)
-        self.search_button.clicked.connect(self.sendIndex)
-
-        self.block_c.AddToAdressBook.clicked.connect(self.addGV)
+        self.searchLine_mdt.editingFinished.connect(self.filtermdt)
+        self.search_table.doubleClicked.connect(self.indexmap_2)
+        self.block_a.Intern.stateChanged.connect(self.InternalStatusChange)
+        self.block_a.Akquise.stateChanged.connect(self.AkquiseStatusChange)
+        self.block_c.REE_AddToAdressBook.clicked.connect(self.rechnungsempfaenger)
+        self.block_n.tab1.block_a.ButtonAdd.clicked.connect(self.tetherRE)
+        self.block_c.AddToAdressBook.clicked.connect(self.ges_vertreter)
+        self.block_m.tab1.block_a.ButtonAdd.clicked.connect(self.tetherGV)
+        self.block_c.GVcheck.stateChanged.connect(self.nat_person)
+        self.block_c.REcheck.stateChanged.connect(self.no_re)
+        self.block_c.elektr_rechnung_check.stateChanged.connect(self.elektr_RE)
+        self.block_g.MV_VV_ablage.stateChanged.connect(self.vv_mv_ablage_change)
+        self.block_g.MV_VV_versand.stateChanged.connect(self.vv_mv_sendung_change)
+        self.block_f.Rahmenvertrag.stateChanged.connect(self.rahmenvertrag_change)
 
         self.addSearchfield(searchable=True)
-        # must be last line in constructor
+
+        # must be last line of constructor
         self.scrollSpace.setWidget(self.scrollWidget)
 
 
+    def add_mapping(self):
+        self.mapper_mdt.addMapping(self.block_a.NameMdt, 1)
+        self.mapper_mdt.addMapping(self.block_a.MdtNr, 23)
+        self.mapper_mdt.addMapping(self.block_a.MVP, 3)
 
-    # extract MdtIndex for search
+
+        self.mapper_mdt.addMapping(self.block_b.Sitz1, 8)
+        self.mapper_mdt.addMapping(self.block_b.Sitz2, 9)
+        self.mapper_mdt.addMapping(self.block_b.Sitz3, 10)
+        self.mapper_mdt.addMapping(self.block_b.Sitz4, 11)
+        self.mapper_mdt.addMapping(self.block_b.Sitz5, 12)
+        self.mapper_mdt.addMapping(self.block_b.Sitz5, 13)
+        self.mapper_mdt.addMapping(self.block_c.GVPosition, 24)
+        self.mapper_mdt.addMapping(self.block_c.elektr_rechnung, 25)
+
+
+
+    def add_extra_mapping(self):
+        self.mapper_REE.addMapping(self.block_c.RE_display, 2)
+        self.mapper_REE.addMapping(self.block_c.RE_blind, 1)
+        self.mapper_gv.addMapping(self.block_c.GVblind, 26)
+        self.mapper_gv.addMapping(self.block_c.GVdisplay, 2)
+
+    def filtermdt(self):
+        # function to filter mdt by input in search line
+        self.search_model.filter_by_name(self.searchLine_mdt.text())
+        print(self.search_model.lastError().text())
+
     @QtCore.pyqtSlot(QtCore.QModelIndex)
-    def indexmap(self, index):
-        self.MdtNrInt = index.sibling(index.row(), 0).data()
-    # send index to query for identifyijng contents
-    def sendIndex(self):
-        if self.MdtNrInt != None:
-            self.addSearchfield(searchable=False)
-            setMapper(self.MdtNrInt)
-            self.block_a.InternStatusDB()
-            self.block_a.AkquiseStatusDB()
+    def indexmap_2(self, index):
+    # central fork to change from searchfield to individual client.
+        if not index.sibling(index.row(), 1).data() is None: # no client nr. = no client fields
+            self.cur_index = index.sibling(index.row(), 1).data() # identify client nr.
+            self.set_models()                                      # fetch data pertaining to client nr
+            self.set_extra_models()                                 # fetch extra data re legal representative and bill
+                                                                    # receiver
+            self.addSearchfield(False)                              # unblock editable fields
         else:
+            self.cur_index = ''                                     # don't crash if no client nr., retry
             self.searchLine_mdt.clear()
+
+
+    def set_models(self):
+        self.mappermodel_mdt = MandantEditmodel(self.cur_index)
+        self.mapper_mdt.setModel(self.mappermodel_mdt)
+        self.add_mapping()
+        self.mapper_mdt.toFirst()
+
+    def set_extra_models(self):
+        self.gv_number = self.mappermodel_mdt.record(self.mapper_mdt.currentIndex()).value(6)
+        self.re_number = self.mappermodel_mdt.record(self.mapper_mdt.currentIndex()).value(7)
+
+        self.mappermodel_gv = GV_model(self.gv_number)
+        self.mapper_gv.setModel(self.mappermodel_gv)
+        self.mappermodel_re = REE_model(self.re_number)
+        self.mapper_REE.setModel(self.mappermodel_re)
+
+        self.add_extra_mapping()
+        self.mapper_gv.toFirst()
+        self.mapper_REE.toFirst()
+
+        self.InternalFileStatus()
+        self.AkquiseFileStatus()
+        self.elektr_re_status()
+        self.no_re()
+        self.vv_mv_ablage()
+        self.vv_mv_sendung()
+        self.rahmenvertrag()
+        self.nat_person()
+
+
 
     def addSearchfield(self, searchable):
         if searchable == True:
@@ -131,18 +209,236 @@ class EditMdt(MainWindow):
             self.block_e.setDisabled(False)
             self.block_f.setDisabled(False)
 
-    def addGV(self):
-        Bezug = {'prozess':"neu", 'Unternehmen': self.block_a.NameMdt.text()}
-        # dict to call #args for prozess, unternehmen
-        print(Bezug)
-        from Arvensteyn import Switch
-        Switch.conference_call(self=Switch, extension=5, **Bezug)
+    def InternalStatusChange(self):
+        #function checks if checkbox "intern" is checked and writes changes to db
+        # first line re initialization before mappermodel_mdt is set
+        InternalIndex = self.mappermodel_mdt.index(self.mapper_mdt.currentIndex(), 4)
 
+        if self.block_a.Intern.isChecked():
+            self.mappermodel_mdt.setData(InternalIndex, True)
+        else:
+            self.mappermodel_mdt.setData(InternalIndex, False)
+
+    def InternalFileStatus(self):
+        # function maps db-entry for "internal file" to checkbox; todo: do this by QDataWidgetMapper?
+        # first line re initialization before mappermodel_mdt is set
+        if not self.mapper_mdt.model() is None:
+            InternalStatus = self.mappermodel_mdt.index(self.mapper_mdt.currentIndex(), 4).data(Qt.ItemDataRole.DisplayRole)
+
+            if InternalStatus == True:
+                self.block_a.Intern.setChecked(True)
+            else:
+                self.block_a.Intern.setChecked(False)
+
+    def elektr_re_status(self):
+        # function maps db-entry for "elektrr_rechnung" to checkbox;
+        # first line re initialization before mappermodel_mdt is set
+        if not self.mapper_mdt.model() is None:
+            elektr_rech_status = self.mappermodel_mdt.index(self.mapper_mdt.currentIndex(), 25).data(Qt.ItemDataRole.DisplayRole)
+
+            if not elektr_rech_status == '':
+                self.block_c.elektr_rechnung_check.setChecked(True)
+            else:
+                self.block_c.elektr_rechnung_check.setChecked(False)
+
+    def AkquiseStatusChange(self):
+        #function checks if checkbox "akquise" is checked and writes changes to db
+        # first line re initialization before mappermodel_mdt is set
+        if not self.mapper_mdt.model() is None:
+            akquiseindex = self.mappermodel_mdt.index(self.mapper_mdt.currentIndex(), 5)
+            if self.block_a.Akquise.isChecked():
+                self.mappermodel_mdt.setData(akquiseindex, True)
+            else:
+                self.mappermodel_mdt.setData(akquiseindex, False)
+
+    def AkquiseFileStatus(self):
+        # function maps db-entry for "akquise file" to checkbox; todo: do this by QDataWidgetMapper?
+        # first line re initialization before mappermodel_mdt is set
+        if not self.mapper_mdt.model() is None:
+            akquiseStatus = self.mappermodel_mdt.index(self.mapper_mdt.currentIndex(), 5).data(Qt.ItemDataRole.DisplayRole)
+            if akquiseStatus == True:
+                self.block_a.Akquise.setChecked(True)
+            else:
+                self.block_a.Akquise.setChecked(False)
+
+    def ges_vertreter(self):
+        self.block_m.tab1.block_a.Arbeitgeber.setText(self.block_a.NameMdt.text())
+        self.block_m.tab1.block_a.Position.setText(self.block_c.GVPosition.text())
+        self.block_m.tab1.block_a.Adresse1.setText(self.block_b.Sitz1.text())
+        self.block_m.tab1.block_a.Adresse2.setText(self.block_b.Sitz2.text())
+        self.block_m.tab1.block_a.PLZ.setText(self.block_b.Sitz3.text())
+        self.block_m.tab1.block_a.Ort.setText(self.block_b.Sitz4.text())
+        self.block_m.show()
+
+    def rechnungsempfaenger(self):
+        self.block_n.tab1.block_a.Arbeitgeber.setText(self.block_a.NameMdt.text())
+        self.block_n.tab1.block_a.Adresse1.setText(self.block_b.Sitz1.text())
+        self.block_n.tab1.block_a.Adresse2.setText(self.block_b.Sitz2.text())
+        self.block_n.tab1.block_a.PLZ.setText(self.block_b.Sitz3.text())
+        self.block_n.show()
+
+    def tetherRE(self):
+        # write new person into humans
+        self.block_n.tab1.human_cleanup()
+
+        # find index of newest person
+        newperson = HumanSearch.result(HumanSearch())
+
+        # write newest person in mandanten as RE
+        self.mappermodel_mdt.setData(self.mappermodel_gv.index(self.mapper_mdt.currentIndex(), 7), newperson)
+
+       # refresh models and mappers
+        self.set_models()
+        self.set_extra_models()
+
+        self.block_n.tab1.clearinput()
+        self.block_n.close()
+
+    def tetherGV(self):
+        # write new person into humans
+        self.block_m.tab1.human_cleanup()
+
+        # find index of newest person
+        newperson = HumanSearch.result(HumanSearch())
+
+        # write newest person in mandanten as GV
+        self.mappermodel_mdt.setData(self.mappermodel_mdt.index(self.mapper_mdt.currentIndex(), 6), newperson)
+
+         # refresh models and mappers
+        self.set_models()
+        self.set_extra_models()
+
+        self.block_m.tab1.clearinput()
+        self.block_m.close()
+
+    def nat_person(self):
+        # disable gv if mandant = nat person
+        if not self.block_c.GVcheck.isChecked():
+            self.block_c.AddToAdressBook.setDisabled(False)
+        else:
+            self.block_c.AddToAdressBook.setDisabled(True)
+            self.update_gv()
+
+    def update_gv(self):
+        # if gv is existant and mandant is set to be nat. person
+        dlg = ArvenDialog("Gesetzlichen Vertreter löschen", "Der gesetzliche Vertreter wird endgültig gelöscht. \n\n(Der Eintrag"               
+                                                            " im Adressbuch bleibt bestehen und \nkann jederzeit wieder mit dem Mandanten"      
+                                                            " verknüpft werden.)")
+        if dlg.exec():
+            gv_check = self.mappermodel_mdt.index(self.mapper_mdt.currentIndex(), 6).data(Qt.ItemDataRole.DisplayRole)
+            if self.block_c.GVcheck.isChecked():
+                if not gv_check == '':
+                    if self.mappermodel_mdt.setData(self.mappermodel_mdt.index(self.mapper_mdt.currentIndex(), 6), None):
+                        self.set_extra_models()
+                        self.block_c.GVdisplay.clear()
+
+    def no_re(self):
+        # disable gv if no separate rechnungsempfänger
+        if self.block_c.REcheck.isChecked():
+            self.block_c.REE_AddToAdressBook.setDisabled(False)
+        else:
+            self.block_c.REE_AddToAdressBook.setDisabled(True)
+            self.update_re()
+
+    def update_re(self):
+        # if re is existant and mandant is checked as no abw. ree
+        dlg = ArvenDialog("Abweichenden Rechnungsempfänger löschen",
+                          "Der abweichende Rechnungsempfänger wird endgültig gelöscht. \n\n(Der Eintrag"
+                          " im Adressbuch bleibt bestehen und \nkann jederzeit wieder mit dem Mandanten"
+                          " verknüpft werden.)")
+        if dlg.exec():
+            re_check = self.mappermodel_mdt.index(self.mapper_mdt.currentIndex(), 7).data(Qt.ItemDataRole.DisplayRole)
+            if not self.block_c.GVcheck.isChecked():
+                if not re_check == '':
+                    if self.mappermodel_mdt.setData(self.mappermodel_mdt.index(self.mapper_mdt.currentIndex(), 7),
+                                                    None):
+                        self.set_extra_models()
+                        self.block_c.RE_display.clear()
+
+    def elektr_RE(self):
+        if not self.block_c.elektr_rechnung_check.isChecked():
+            self.block_c.elektr_rechnung.setDisabled(True)
+            self.update_elektr_RE()
+        else:
+            self.block_c.elektr_rechnung.setDisabled(False)
+
+    def update_elektr_RE(self):
+        dlg = ArvenDialog("Adresse für elektronischen Rechnungsempfang löschen",
+                          "Die E-Mailadresse wird endgültig gelöscht. \n\n(Dieser Vorgang "
+                          "kann nicht rückgängig gemacht werden.)")
+        if dlg.exec():
+            self.rech_check = self.mappermodel_mdt.index(self.mapper_mdt.currentIndex(), 25).data(Qt.ItemDataRole.DisplayRole)
+            if not self.block_c.elektr_rechnung_check.isChecked():
+                if not self.rech_check == '':
+                    if self.mappermodel_mdt.setData(self.mappermodel_mdt.index(self.mapper_mdt.currentIndex(), 25), None):
+                        self.set_extra_models()
+                        self.block_c.elektr_rechnung.clear()
+
+    def vv_mv_sendung_change(self):
+        # function checks if checkbox "mv_vv versendet" is checked and writes changes to db
+        # first line re initialization before mappermodel_mdt is set
+        if not self.mapper_mdt.model() is None:
+            mv_versandindex = self.mappermodel_mdt.index(self.mapper_mdt.currentIndex(), 18)
+            if self.block_g.MV_VV_versand.isChecked():
+                self.mappermodel_mdt.setData(mv_versandindex, True)
+            else:
+                self.mappermodel_mdt.setData(mv_versandindex, False)
+
+    def vv_mv_sendung(self):
+        # function maps db-entry for "mv/vv versendet" to checkbox;
+        # first line re initialization before mappermodel_mdt is set
+        if not self.mapper_mdt.model() is None:
+            mv_vv_status = self.mappermodel_mdt.index(self.mapper_mdt.currentIndex(), 18).data(Qt.ItemDataRole.DisplayRole)
+            if mv_vv_status == True:
+                self.block_g.MV_VV_versand.setChecked(True)
+            else:
+                self.block_g.MV_VV_versand.setChecked(False)
+
+    def vv_mv_ablage_change(self):
+        # function checks if checkbox "mv_vv abgelegt" is checked and writes changes to db
+        # first line re initialization before mappermodel_mdt is set
+        if not self.mapper_mdt.model() is None:
+            mv_ablageindex = self.mappermodel_mdt.index(self.mapper_mdt.currentIndex(), 19)
+            if self.block_g.MV_VV_ablage.isChecked():
+                self.mappermodel_mdt.setData(mv_ablageindex, True)
+            else:
+                self.mappermodel_mdt.setData(mv_ablageindex, False)
+
+    def vv_mv_ablage(self):
+        # function maps db-entry for "mv/vv abgelegt" to checkbox;
+        # first line re initialization before mappermodel_mdt is set
+        if not self.mapper_mdt.model() is None:
+            mv_vv_ablagestatus = self.mappermodel_mdt.index(self.mapper_mdt.currentIndex(), 19).data(
+                Qt.ItemDataRole.DisplayRole)
+            if mv_vv_ablagestatus == True:
+                self.block_g.MV_VV_ablage.setChecked(True)
+            else:
+                self.block_g.MV_VV_ablage.setChecked(False)
+
+    def rahmenvertrag_change(self):
+        # function checks if checkbox "rahmenvertrag" is checked and writes changes to db
+        # first line re initialization before mappermodel_mdt is set
+        if not self.mapper_mdt.model() is None:
+            rahmenvertrag_index = self.mappermodel_mdt.index(self.mapper_mdt.currentIndex(), 28)
+            if self.block_f.Rahmenvertrag.isChecked():
+                self.mappermodel_mdt.setData(rahmenvertrag_index, True)
+            else:
+                self.mappermodel_mdt.setData(rahmenvertrag_index, False)
+
+    def rahmenvertrag(self):
+        # function maps db-entry for "mv/vv abgelegt" to checkbox;
+        # first line re initialization before mappermodel_mdt is set
+        if not self.mapper_mdt.model() is None:
+            rahmenvertrag_status = self.mappermodel_mdt.index(self.mapper_mdt.currentIndex(), 28).data(
+                Qt.ItemDataRole.DisplayRole)
+            if rahmenvertrag_status == True:
+                self.block_f.Rahmenvertrag.setChecked(True)
+            else:
+                self.block_f.Rahmenvertrag.setChecked(False)
 
 class GrundDaten(QWidget):
     def __init__(self):
         super(GrundDaten, self).__init__()
-
 
         self.VBox = QVBoxLayout(self)
         self.HBox2 = QHBoxLayout()
@@ -188,64 +484,6 @@ class GrundDaten(QWidget):
         self.VBox.addLayout(self.HBox4)
         self.VBox.addSpacerItem(self.spacerV)
 
-        self.Intern.stateChanged.connect(self.InternStatus)
-        self.Akquise.stateChanged.connect(self.AkquiseStatus)
-
-        self.InternStatus()
-        self.AkquiseStatus()
-
-        self.InternStatusDB()
-        self.AkquiseStatusDB()
-
-        self.MdtNr.textChanged.connect(self.InternStatusDB)
-        self.MdtNr.textChanged.connect(self.AkquiseStatusDB)
-
-        mapper.addMapping(self.NameMdt, 1)
-        mapper.addMapping(self.MdtNr, 34)
-        mapper.addMapping(self.MVP, 33)
-
-    def InternStatus(self):
-        if not self.Intern.isChecked():
-            self.InternData = "Regulär"
-  
-        else:
-            self.InternData = "Intern"
-
-        #DBModelIndex = DBModelMdt.index(mapper.currentIndex(), 6)
-        #DBModelMdt.setData(DBModelIndex, self.InternData)
-
-
-    def InternStatusDB(self):  # get content from db in checkbox
-        if DBModelMdt.index(mapper.currentIndex(), 6).data() == "Intern":
-            self.Intern.setChecked(True)
-        elif DBModelMdt.index(mapper.currentIndex(), 6).data() == None:
-            intern = "Regulär"
-            DBModelIndex = DBModelMdt.index(mapper.currentIndex(), 6)
-            DBModelMdt.setData(DBModelIndex, intern)
-
-# ToDo: use setData to write status to model
-    def AkquiseStatus(self):
-        if not self.Akquise.isChecked():
-            self.AkquiseData = "Mandatiert"
-        else:
-            self.AkquiseData = "Akquise"
-
-# ToDo: Anpassen der Spalten in DB
-
-        DBModelIndex = DBModelMdt.index(mapper.currentIndex(), 7)
-        DBModelMdt.setData(DBModelIndex, self.AkquiseData)
-
-
-# get content from db in checkbox
-# ToDo: Anpassen der Spalten in DB
-    def AkquiseStatusDB(self):
-        if DBModelMdt.index(mapper.currentIndex(), 7).data() == "Akquise":
-            self.Akquise.setChecked(True)
-        else:
-            pass
-
-
-
 class Sitz(QWidget):
     def __init__(self):
         super(Sitz, self).__init__()
@@ -255,8 +493,9 @@ class Sitz(QWidget):
         self.Sitz2.adjustSize()
         self.Sitz3 = InputArve("PLZ")
         self.Sitz4 = InputArve("Ort")
-        self.Sitz5 = ComboArve("Bundesland")
-        self.Sitz5.addItems(Bundeslaender)
+        self.Sitz5 = InputArve("Bundesland")
+        completer = QCompleter(Bundeslaender, self)
+        self.Sitz5.setCompleter(completer)
         self.Sitz6 = ComboArve("Staat")
         self.Sitz6.addItems(Staaten)
         self.spacerV = QSpacerItem(10, 10, hPolicy=QSizePolicy.Policy.Minimum,
@@ -275,15 +514,6 @@ class Sitz(QWidget):
         self.VBox.addWidget(self.Sitz6)
         self.VBox.addSpacerItem(self.spacerV)
 
-# mapping der widgets
-# ToDo: Anpassen der Spalten in Db
-        #mapper.addMapping(self.Sitz1, )
-        #mapper.addMapping(self.Sitz2, )
-        #mapper.addMapping(self.Sitz3, )
-        #mapper.addMapping(self.Sitz4, )
-        mapper.addMapping(self.Sitz5, 8)                # problem: Combobox
-        #mapper.addMapping(self.Sitz6, )                # problem: Combobox
-
 
 class GesVertretung(QWidget):
     def __init__(self):
@@ -291,11 +521,15 @@ class GesVertretung(QWidget):
 
         self.GVlabel = ArveLabel("header", "Gesetzliche Vertretung des Mandanten")
         self.GVdisplay = InputArve("Gesetzlicher Vertreter")
-        self.GVPosition = ComboArve("Position des gesetzlichen Vertreters")
-        self.GVPosition.addItems(Positionen)
+        self.GVblind = InputArve('')
+
+        self.GVdisplay.setReadOnly(True)
+        self.GVPosition = InputArve("Position des gesetzlichen Vertreters")
+        completer = QCompleter(Positionen, self)
+        self.GVPosition.setCompleter(completer)
         self.GVcheck = ArveCheck("Mandant ist natürliche Person", False)
-        self.AddToAdressBook = ArvenButton("Zum Adressbuch hinzufügen")
-        self.setFromAdressBook = ArvenButton("Aus dem Adressbuch auswählen")
+        #self.GVcheck.stateChanged.connect(self.nat_person)
+        self.AddToAdressBook = ArvenButton("Adressbuch")
         self.spacerV = QSpacerItem(10, 10, hPolicy=QSizePolicy.Policy.Minimum,
                                    vPolicy=QSizePolicy.Policy.Expanding)
 
@@ -303,41 +537,100 @@ class GesVertretung(QWidget):
 
         self.GVVBox.addWidget(self.GVlabel)
         self.GVVBox.addWidget(self.GVcheck)
-        self.GVVBox.addWidget(self.GVdisplay)
         self.GVVBox.addWidget(self.GVPosition)
-        self.GVVBox.addWidget(self.setFromAdressBook)
+        self.GVVBox.addWidget(self.GVdisplay)
         self.GVVBox.addWidget(self.AddToAdressBook)
 
         self.REcheck = ArveCheck("Abweichender Rechnungsempfänger", True)
-        self.REcheck.stateChanged.connect(self.hideRE)
         self.RE_display = InputArve("Rechnungsempfänger")
-        self.REE_AddToAdressBook = ArvenButton("Zum Adressbuch hinzufügen")
-        self.REE_setFromAdressBook = ArvenButton("Aus dem Adressbuch auswählen")
+        self.RE_display.setReadOnly(True)
+        self.RE_blind = QComboBox()
+        self.REE_AddToAdressBook = ArvenButton("Adressbuch")
         self.spacerV = QSpacerItem(10, 10, hPolicy=QSizePolicy.Policy.Minimum,
                                    vPolicy=QSizePolicy.Policy.Expanding)
 
+        self.elektr_rechnung_check = ArveCheck("Elektronische Rechnung", False)
+        self.elektr_rechnung = InputArve("Email-Adresse für Rechnung")
+        #self.elektr_rechnung_check.stateChanged.connect(self.elektr_RE)
+        #self.elektr_RE()
 
+        self.GVVBox.addWidget(self.REcheck)
+        self.GVVBox.addWidget(self.RE_display)
+        self.GVVBox.addWidget(self.REE_AddToAdressBook)
+        self.GVVBox.addWidget(self.elektr_rechnung_check)
+        self.GVVBox.addWidget(self.elektr_rechnung)
+        self.GVVBox.addSpacerItem(self.spacerV)
 
-
-        self.REVBox = QVBoxLayout()
-
-        self.REVBox.addWidget(self.REcheck)
-        self.REVBox.addWidget(self.RE_display)
-        self.REVBox.addWidget(self.REE_setFromAdressBook)
-        self.REVBox.addWidget(self.REE_AddToAdressBook)
-        self.REVBox.addSpacerItem(self.spacerV)
-
-        self.GVVBox.addLayout(self.REVBox)
-
-    def hideRE(self):
-        if not self.REcheck.isChecked():
-            self.REE_AddToAdressBook.setDisabled(True)
-            self.REE_setFromAdressBook.setDisabled(True)
-            self.abwRE = 0
-        else:
-            self.REE_AddToAdressBook.setDisabled(False)
-            self.REE_setFromAdressBook.setDisabled(False)
-            self.abwRE = 1
+ #
+ #
+ #
+ #
+ #
+ #
+ #
+ #
+ #
+ #
+ #
+ #
+ #
+ #
+ #
+ #
+ #
+ #
+    #
+    #
+    #
+    #
+    #
+    #
+    #
+    #
+    #def hideRE(self):
+    #    if not self.REcheck.isChecked():
+    #        self.REE_AddToAdressBook.setDisabled(True)
+    #    else:
+    #        self.REE_AddToAdressBook.setDisabled(False)
+    #
+    #def check_elektr_re(self):
+    #    self.rech_check = mappermodel.index(mapper_mdt.currentIndex(), 25).data(Qt.ItemDataRole.DisplayRole)
+    #    if not self.rech_check == '':
+    #        self.elektr_rechnung_check.setChecked(True)
+    #    else:
+    #        print(self.rech_check)
+    #
+    #def elektr_RE(self):
+    #    if not self.elektr_rechnung_check.isChecked():
+    #        self.elektr_rechnung.setDisabled(True)
+    #    else:
+    #        self.elektr_rechnung.setDisabled(False)
+    #    self.update_elektr_RE()
+    #
+    #def update_elektr_RE(self):
+    #    if not mapper_mdt.model() is None:
+    #        self.rech_check = mappermodel.index(mapper_mdt.currentIndex(), 25).data(Qt.ItemDataRole.DisplayRole)
+    #        if not self.elektr_rechnung_check.isChecked():
+    #            if not self.rech_check == '':
+    #                Index = mappermodel.index(mapper_mdt.currentIndex(), 25)
+    #
+    #                print(mappermodel.setItemData(Index, {2 : ''}))
+    #
+    #def ges_vertreter(self):
+    #    if not mapper_mdt.model() is None:
+    #        gesvertreter = mappermodel.index(mapper_mdt.currentIndex(), 6).data(Qt.ItemDataRole.DisplayRole)
+    #        self.GVdisplay.setText(gesvertreter)
+    #
+    #def REE_display(self):
+    #    if not mapper_mdt.model() is None:
+    #        rechnungsempfaenger = mappermodel.index(mapper_mdt.currentIndex(), 7).data(Qt.ItemDataRole.DisplayRole)
+    #        self.GVdisplay.setText(rechnungsempfaenger)
+    #
+    #def check_abwRE(self):
+    #    if not mapper_mdt.model() is None:
+    #        REE_check = mappermodel.index(mapper_mdt.currentIndex(), 7).data(Qt.ItemDataRole.DisplayRole)
+    #        if not REE_check == '':
+    #            self.REcheck.setChecked(True)
 
 class Berufsrecht(QWidget):
     def __init__(self):
@@ -356,6 +649,11 @@ class Berufsrecht(QWidget):
         self.spacerV = QSpacerItem(10, 10, hPolicy=QSizePolicy.Policy.Minimum,
                                    vPolicy=QSizePolicy.Policy.Expanding)
         self.VBox.addSpacerItem(self.spacerV)
+        self.fill_gwg()
+
+    def fill_gwg(self):
+        for key, value in gwg.items():
+            self.GeldwaescheG.addItem(str(key), value)
 
 
 class Abrechnung(QWidget):

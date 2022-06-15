@@ -13,7 +13,11 @@ from PyQt6.QtWidgets import (QApplication,
                              QDateEdit,
                              QSpinBox,
                              QTableView,
-                             QAbstractItemView
+                             QAbstractItemView,
+                             QTextEdit,
+                             QDialog,
+                             QDialogButtonBox,
+                             QVBoxLayout
                              )
 from PyQt6.QtCore import Qt, QLocale
 
@@ -114,19 +118,19 @@ class InputArve(QLineEdit):
         self.setMinimumHeight(35)
         self.setPlaceholderText(placeholder)
         self.adjustSize()
-        self.setStyleSheet("border: 1px #8f8f91; border-radius:4px; background-color:rgb(241,241,241)")
+        self.setStyleSheet("border: 1px; border-radius:4px; background-color:rgb(241,241,241)")
 
 
 class ComboArve(QComboBox):
     def __init__(self, placeholder):
         super().__init__()
+        self.placeholder = placeholder#
 
-        self.setupInput(placeholder)
+        self.setupInput()
 
-    def setupInput(self, placeholder):
+    def setupInput(self):
         self.setMinimumHeight(35)
-        self.acceptDrops()
-        self.setPlaceholderText(placeholder)
+        self.setPlaceholderText(self.placeholder)
         self.adjustSize()
         styled = "QComboBox { combobox-popup: 0; }" \
                  "QComboBox {border: 1px gray; border-radius: 4px; padding: 1px 18px 1px 3px; min-width: 6em;} " \
@@ -210,11 +214,11 @@ class ArvenDate(QDateEdit):
         super(ArvenDate, self).__init__()
         self.setMinimumHeight(35)
         self.adjustSize()
-        self.setLocale(QLocale(QLocale.Language.German, QLocale.Country.Germany))
         self.setCalendarPopup(False)
-        self.setStyleSheet("background-color:rgb(241, 241, 241); border-width:1px")
-        self.setDate(datetime.datetime.today())
-        self.setDisplayFormat("dd. MMMM yyyy")
+        self.setStyleSheet("QDateEdit {background-color:rgb(241, 241, 241); border-width:1px; border-radius:4px;}"
+                           "QDateEdit::down-arrow {image: url(/Users/Shared/PycharmProjects/arvensteynIII/gui/g2045-3t.png)}"
+                           "QDateEdit::up-arrow {image: url(/Users/Shared/PycharmProjects/arvensteynIII/gui/g2045-3t.png)}")
+        self.setDisplayFormat("dddd, dd. MMMM yyyy")
 
 class StringBox(QSpinBox):
     def __init__(self, strings, parent=None):
@@ -238,6 +242,19 @@ class StringBox(QSpinBox):
         return self._values[text]
 
 
+class ArvenText(QTextEdit):
+    def __init__(self, placeholder):
+        super(ArvenText, self).__init__()
+        self.setupInput(placeholder)
+
+    def setupInput(self, placeholder):
+        self.setMinimumHeight(140)
+        self.setPlaceholderText(placeholder)
+        self.adjustSize()
+        self.setStyleSheet("border: 1px; border-radius:4px; background-color:rgb(241,241,241)")
+
+
+
 
 class ArvenTable(QTableView):
     def __init__(self):
@@ -247,7 +264,30 @@ class ArvenTable(QTableView):
         self.setStyleSheet("QTableView {border-style:solid; border-color:lightgray; border-width:1px; "
                            "border-radius:4px; gridline-color:white}"
                            "QTableView::item{border-top-style: solid; border-top: 1px; border-top-color: lightgray; "
-                           "border-bottom: 1px; border-bottom-style:solid; border-bottom-color: lightgray}")
+                           "border-bottom: 1px; border-bottom-style:solid; border-bottom-color: lightgray; padding:10px}")
         self.horizontalHeader().hide()
         self.verticalHeader().hide()
         self.horizontalHeader().setStretchLastSection(True)
+        self.setTextElideMode(Qt.TextElideMode.ElideNone)
+        self.resizeRowsToContents()
+
+class ArvenDialog(QDialog):
+    def __init__(self, title:str, warning:str):
+        super(ArvenDialog, self).__init__()
+
+        self.setWindowTitle(title)
+
+        self.setStyleSheet("background-color: white; color: rgb(9, 58, 112);")
+
+        QBtn = QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+
+        self.buttonBox = QDialogButtonBox(QBtn)
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+
+        self.layout = QVBoxLayout()
+        message = QLabel(warning)
+        self.layout.addWidget(message)
+        self.layout.addWidget(self.buttonBox)
+        self.setLayout(self.layout)
+

@@ -1,14 +1,14 @@
 from PyQt6.QtWidgets import QApplication, QProgressBar, QSystemTrayIcon, QMenu, QMainWindow, QStackedWidget
 import sys  # Only needed for access to command line arguments
-from PyQt6.QtCore import pyqtSignal, pyqtSlot
+from PyQt6.QtCore import pyqtSignal, pyqtSlot, QLocale
 
 from src.desktop import Desktop
 from src.ArvensteynMenu import Tray
 
 from src.EditMdt import EditMdt
-from src.InputHumans import Human
+from src.InputHumans import Human, Human_Selection
 from src.auftraege import MainFrameAuftraege
-
+from src.auxiliary_gui import ProxyStyle
 from src.Login import Login
 from src.Timesheet import Timeframe, New_Entry
 from src.Rechnungslauf import Rechnungslauf
@@ -32,11 +32,10 @@ class Switch:
     def pageNr(self, extension: int):
 
         if extension == 0:
-            self.modul1 = Timeframe()
-            self.modul1.showMaximized()
+            self.modul1 = EditMdt()
+            self.modul1.show()
             self.modul1.setFocus()
-            self.modul_trayII = Tray(init=1)
-            self.modul_trayII.show()
+
 
         elif extension == 1:
             singleton()
@@ -67,7 +66,7 @@ class Switch:
             # no singleton!
 
             print(prozess, Unternehmen, Aktenbezug)
-            self.modul6 = Human(prozess=prozess, aktenbezug=Aktenbezug, unternehmen=Unternehmen)
+            self.modul6 = Desktop()
             self.modul6.show()
         else:
             pass
@@ -83,10 +82,13 @@ def main():
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
 
+    QLocale.setDefault(QLocale(QLocale.Language.German))
 
+    modul_trayII = Tray(init=1)
+    modul_trayII.show()
 
     Switch.pageNr(self=Switch(), extension=0)
-    workdays()
+
 
     try:
         sys.exit(app.exec())

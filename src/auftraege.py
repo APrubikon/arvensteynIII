@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
 )
 
 from PyQt6 import QtCore
-from PyQt6.QtCore import QRegularExpression
+from PyQt6.QtCore import QRegularExpression, QModelIndex, QItemSelection
 from PyQt6.QtGui import QRegularExpressionValidator
 from datetime import date
 
@@ -16,16 +16,26 @@ today_date = date.today()
 Jahr = today_date.strftime("%y")
 
 from src.auxiliary_gui import EmptyDelegate
-from src.data import DBModelMdt, DBModelAuftraege, Auftragsauswahl, PreviousEntriesFileProxy
+from src.data import DBModelMdt, DBModelAuftraege, Auftragsauswahl, Gerichte
+
+kollisionen = {"Kollisionsprüfung durch verantwortlichen Partner ergebnislos" : 1,
+               "Strategische Kollision mit Bestandsmandat, Klärung mit verantwortlichen Partnern vor Annahme erfolgt" : 2,
+               "Kollision i.e.S festgestellt, Mandat wird abgelehnt oder beendet" : 3}
+
+
+
+
 
 
 
 mapper = QDataWidgetMapper()
-mapper.setModel(DBModelAuftraege())
+ergebnisModel = DBModelAuftraege()
+ergebnisModel.sort(0, Qt.SortOrder.AscendingOrder)
+mapper.setModel(ergebnisModel)
 
 
 def setMapper(current):
-    mapper.setCurrentIndex(current.row())
+    mapper.setCurrentIndex(current)
     print(mapper.currentIndex())
     print(current)
 
@@ -62,6 +72,10 @@ class SearchfieldAuftraege(ArvenWidget):
         self.searchModes.addWidget(self.searchMode1)
         self.searchModes.addWidget(self.searchMode2)
 
+
+
+
+
         self.search_line = InputArve("Bitte Mandanten auswählen")
         self.completer = QCompleter()
         self.completer.setModel(DBModelMdt())
@@ -71,10 +85,9 @@ class SearchfieldAuftraege(ArvenWidget):
         self.completer.activated[QtCore.QModelIndex].connect(self.indexmap)
 
         self.ergebnisListe = ArvenTable()
-        self.ergebnisListe.clicked.connect(setMapper)
+        self.ergebnisListe.clicked.connect(self.indexmap_2)
         self.ergebnisListe.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.ergebnisListe.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-
 
         self.vBox = QVBoxLayout(self)
         self.vBox.addLayout(self.searchModes)
@@ -105,18 +118,30 @@ class SearchfieldAuftraege(ArvenWidget):
         self.MdtName:str = index.sibling(index.row(), 1).data()
         self.Auftragsliste(self.MdtName)
 
+    @QtCore.pyqtSlot(QtCore.QModelIndex)
+    def indexmap_2(self, index):
+        self.AuftrID: int = index.sibling(index.row(), 4).data()
+        for i in range(ergebnisModel.rowCount()):
+                if ergebnisModel.record(i).value(0) == self.AuftrID:
+                    print(ergebnisModel.record(i).value(0))
+                    mapper.setCurrentIndex(i)
+
+
+        print(DBModelAuftraege.lastError(DBModelAuftraege()).text())
+
 
     def Auftragsliste(self, MdtName:str):
-        self.ergebnisListe.setModel(Auftragsauswahl(MdtName))
-        for i in range(0, 20):
-            self.ergebnisListe.setColumnHidden(i, True)
-            self.ergebnisListe.setItemDelegate(EmptyDelegate())
-        self.ergebnisListe.setColumnHidden(5, False)
-        self.ergebnisListe.setColumnHidden(4, False)
+        model = Auftragsauswahl(MdtName)
+        self.ergebnisListe.setModel(model)
         self.ergebnisListe.verticalHeader().hide()
         self.ergebnisListe.horizontalHeader().setStretchLastSection(True)
         self.ergebnisListe.horizontalHeader().hide()
-        self.ergebnisListe.setWordWrap(True)
+
+        self.ergebnisListe.setTextElideMode(Qt.TextElideMode.ElideNone)
+        self.ergebnisListe.resizeRowsToContents()
+        self.ergebnisListe.setColumnHidden(2, True)
+        self.ergebnisListe.setColumnHidden(3, True)
+        self.ergebnisListe.setColumnHidden(4, True)
 
 
 class DatenAuftraege(ArvenWidget):
@@ -130,6 +155,7 @@ class DatenAuftraege(ArvenWidget):
         self.HBox3 = QHBoxLayout()
         self.HBox4 = QHBoxLayout()
         self.HBox5 = QHBoxLayout()
+        self.HBox6 = QHBoxLayout()
 
         self.Auftragsjahr = Jahr
 
@@ -142,11 +168,22 @@ class DatenAuftraege(ArvenWidget):
         self.AddGegner2 = ArvenButton("weiteren Gegner zur Datenbank hinzufügen")
         self.Gegner3 = InputArve("sonstiger Beteiligter")
         self.AddGegner3 = ArvenButton("sonstigen Beteiligten zur Datenbank hinzufügen")
+        self.rvg = ArveCheck("Abrechnung nach RVG", False)
+        self.anmerkungen = ArvenText("Bemerkungen")
 
         self.kollisionAuftr = ComboArve("Auftragsbezogene Kollisionsprüfung")
-        self.Gerichte = ComboArve("Gericht")
+        self.Gerichte = InputArve("Gericht")
+        self.completer_ger = QCompleter()
+        self.completer_ger.setModel(Gerichte())
+        self.completer_ger.setCompletionColumn(1)
+        self.completer_ger.setCaseSensitivity(QtCore.Qt.CaseSensitivity.CaseInsensitive)
+        self.Gerichte.setCompleter(self.completer_ger)
+        self.completer_ger.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
+
         self.gerichtAz = InputArve("Gerichtliches Az.")
+
         self.streitwert = InputArve("Streitwert")
+ 
         limit = QRegularExpression("[0-9]*")
         limiter = QRegularExpressionValidator(limit)
         self.streitwert.setValidator(limiter)
@@ -155,6 +192,8 @@ class DatenAuftraege(ArvenWidget):
 
         mapper.addMapping(self.Auftragsname, 5)
         mapper.addMapping(self.Auftragsnummer, 4)
+
+        # Todo add mapping
         self.HBox.addWidget(self.Auftragsname, 2)
         self.HBox.addWidget(self.Auftragsnummer, 1)
         self.HBox1.addWidget(self.Gegner, 2)
@@ -163,13 +202,31 @@ class DatenAuftraege(ArvenWidget):
         self.HBox2.addWidget(self.AddGegner2, 1)
         self.HBox3.addWidget(self.Gegner3, 2)
         self.HBox3.addWidget(self.AddGegner3, 1)
+        self.HBox4.addSpacerItem(self.spacerH)
+        self.HBox4.addWidget(self.addRae)
+        self.HBox5.addWidget(self.streitwert)
+        self.HBox5.addWidget(self.rvg)
+        self.HBox6.addWidget(self.Gerichte, 2)
+        self.HBox6.addWidget(self.gerichtAz, 1)
 
         self.VBox.addLayout(self.HBox)
         self.VBox.addLayout(self.HBox1)
         self.VBox.addLayout(self.HBox2)
         self.VBox.addLayout(self.HBox3)
+        self.VBox.addLayout(self.HBox4)
         self.VBox.addWidget(self.kollisionAuftr)
-        self.VBox.addWidget(self.Gerichte)
-        self.VBox.addWidget(self.streitwert)
+        self.VBox.addLayout(self.HBox6)
+        self.VBox.addLayout(self.HBox5)
+        self.VBox.addWidget(self.anmerkungen)
 
         self.VBox.addSpacerItem(self.spacerV)
+        self.fill_kollision()
+
+
+    def fill_kollision(self):
+        for key, value in kollisionen.items():
+            self.kollisionAuftr.addItem(str(key), value)
+
+
+
+

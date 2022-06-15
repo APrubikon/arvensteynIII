@@ -1,9 +1,11 @@
 
 from PyQt6.QtWidgets import QSystemTrayIcon, QMenu, QApplication
 from PyQt6.QtGui import QIcon, QAction
-from PyQt6.QtCore import pyqtSlot
-from src.config import currentConfig
-from src.data import FFindfromAZ
+from PyQt6 import QtCore
+from PyQt6.QtCore import pyqtSlot, QModelIndex, pyqtSignal, Qt
+from src.QuickConnect import quickconnect
+from src.data import MostRecentFiles
+from src.desktop import Desktop
 
 
 
@@ -26,13 +28,19 @@ class Tray(QSystemTrayIcon):
         self.MainMenu5.triggered.connect(self.quit)
         self.MainMenu3.triggered.connect(self.Desktop)
 
-        self.list = currentConfig.getcurrentfiles(self=currentConfig())
+        self.list = MostRecentFiles()
+        self.indexlist = []
 
-        for item in self.list:
-            self.MainMenu1.addAction(str(item))
 
-        for action in self.MainMenu1.actions():
-            action.triggered.connect(lambda checked, a=action.text(): self.quickOpen(a))
+
+        for i in range(self.list.rowCount()):
+            az = self.list.index(i, 1)
+            self.indexlist.append(az)
+
+       # dynamic population of Menu with previously used filenumbers
+        for item in self.indexlist:
+            timesheet = self.MainMenu1.addAction(item.data(Qt.ItemDataRole.DisplayRole))
+            timesheet.triggered.connect(lambda triggered, a=item : self.quickOpen(a))
 
         if init == 0:
             self.Main_Menu.addAction(self.MainMenu4)
@@ -49,13 +57,14 @@ class Tray(QSystemTrayIcon):
             self.setContextMenu(self.Main_Menu)
 
 
-    @pyqtSlot()
-    def quickOpen(self, item:str):
-        FFindfromAZ(file=item)
+    @pyqtSlot(QtCore.QModelIndex)
+    def quickOpen(self, item):
+        quickconnect(item)
 
     def Desktop(self):
-        from src.desktop import Desktop
-        Desktop().showMaximized()
+        desktop =  Desktop()
+        desktop.showMaximized()
+        desktop.setFocus()
 
     def quit(self):
         app = QApplication.instance()

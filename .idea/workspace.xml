@@ -2,46 +2,32 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="089c8d03-262f-4b7c-aa3c-b91fea89a774" name="Changes" comment="iniitial">
-      <change afterPath="$PROJECT_DIR$/.idea/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/arvensteynIII.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Arvensteyn.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chickenscratch.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/configfile.ini" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gui/QWidgetVorlage.ui" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gui/g2045-2.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gui/g2045-2test.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gui/g2045-3.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gui/g2045-3.svg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gui/g2045-3t.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gui/g2045-3w.afphoto" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gui/g2045-3w.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gui/g2046-2.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/reifemdt.sql" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/security.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/ArvensteynMenu.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/EditMdt.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/InputHumans.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/Leistunngserfassung.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/Login.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/MainLayout.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/Rechnungslauf.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/Test.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/Timesheet.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/auftraege.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/auxiliary_gui.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/config.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/data.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/db.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/desktop.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/korrektur.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/testtable.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/testtt.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/variables.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/variables.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/Filepaths.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/NewEntry.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/QuickConnect.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/aux_data.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/aux_dataII.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/soTest.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Arvensteyn.py" beforeDir="false" afterPath="$PROJECT_DIR$/Arvensteyn.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Arvensteyn.spec" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/configfile.ini" beforeDir="false" afterPath="$PROJECT_DIR$/configfile.ini" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.spec" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ArvensteynMenu.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/ArvensteynMenu.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/EditMdt.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/EditMdt.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/InputHumans.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/InputHumans.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Leistunngserfassung.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/Leistungserfassung.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/MainLayout.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/MainLayout.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Test.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/Test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Timesheet.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/Timesheet.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/auftraege.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/auftraege.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/auxiliary_gui.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/auxiliary_gui.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/data.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/data.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/db.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/db.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/desktop.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/desktop.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/mat_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/mat_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/testtt.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/testtt.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -114,6 +100,48 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="EditMdt" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="arvensteynIII" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/EditMdt.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="Test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="arvensteynIII" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/Test.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="chickenscratch" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="arvensteynIII" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -135,27 +163,6 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="config" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="arvensteynIII" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/config.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
     <configuration name="mat_test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="arvensteynIII" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -169,27 +176,6 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/mat_test.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="security" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="arvensteynIII" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/security.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -221,19 +207,19 @@
     </configuration>
     <list>
       <item itemvalue="Python.Arvensteyn" />
-      <item itemvalue="Python.security" />
-      <item itemvalue="Python.config" />
       <item itemvalue="Python.chickenscratch" />
       <item itemvalue="Python.testtt" />
       <item itemvalue="Python.mat_test" />
+      <item itemvalue="Python.Test" />
+      <item itemvalue="Python.EditMdt" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.EditMdt" />
+        <item itemvalue="Python.Test" />
+        <item itemvalue="Python.mat_test" />
         <item itemvalue="Python.testtt" />
         <item itemvalue="Python.chickenscratch" />
-        <item itemvalue="Python.mat_test" />
-        <item itemvalue="Python.config" />
-        <item itemvalue="Python.security" />
       </list>
     </recent_temporary>
   </component>
@@ -276,13 +262,18 @@
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/src/InputHumans.py</url>
-          <line>106</line>
+          <line>239</line>
           <option name="timeStamp" value="3" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/src/MainLayout.py</url>
-          <line>18</line>
+          <line>22</line>
           <option name="timeStamp" value="5" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/data.py</url>
+          <line>51</line>
+          <option name="timeStamp" value="7" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>

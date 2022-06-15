@@ -127,29 +127,3 @@ def last_files_update(most_current):
         with open('/Users/Shared/PycharmProjects/arvensteynIII/configfile.ini', 'w') as configfile:
             edit.write(configfile)
 
-
-# def last_file_complement(prev_list):
-#    edit = configparser.ConfigParser()
-#    edit.read("/Users/Shared/PycharmProjects/arvensteynIII/configfile.ini")
-#
-#    LastFiles = edit["used_data"]
-#    if prev_list in LastFiles["last_files"]:
-#
-#
-#
-#    #if most_current in prev_list:
-#    #    print("nothing new")
-#    #else:
-#    prev_list.append(most_current)
-#    print(prev_list)
-#    with open('/Users/Shared/PycharmProjects/arvensteynIII/configfile.ini', 'w') as configfile:
-#        edit.write(configfile)
-
-
-def testlist():
-    cfg = ConfigObj(cfgfile)
-    t1 = range(1, 11)
-    # no *need* to create a subsection
-    cfg['test'] = {}
-    cfg['test']['testlist'] = t1
-    cfg.write()

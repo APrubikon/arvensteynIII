@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (QVBoxLayout,
 
 
 from src.config import currentConfig
-from src.data import Leistungen
+from src.data import Leistungen, PreviousEntriesFileProxy
 
 from src.auxiliary_gui import EmptyDelegate
 from src.variables import *
@@ -19,32 +19,33 @@ from src.variables import *
 delegate = EmptyDelegate()
 
 
-class New_Entry(MainWindow):
-    def __init__(self, file, az, mdt, auftrag):
-        super(New_Entry, self).__init__()
+
+class New_Entry(ArvenWidget):
+    def __init__(self, file, az, mdt, auftrag, parent=None):
+        super(New_Entry, self).__init__("not")
 
         # variables
         self.file = file
         self.az = az
         self.mdt = mdt
         self.auftrag = auftrag
+        print(self.file, self.az, self.mdt, self.auftrag)
 
 
         # window
         self.setWindowTitle("Arvensteyn - Leistungserfassung")
-        self.center()
+        #self.center()
 
         # buttons
-        self.ButtonZurueck.hide()
+        #self.ButtonZurueck.hide()
         self.zurueck = ArvenButton("abbrechen")
         self.verticalLayout_3.addWidget(self.zurueck)
         self.zurueck.clicked.connect(self.closing)
 
 
         self.block_a = EntryWidgets()
-
-        self.block_b = PreviousEntriesToFile(file=self.file)
-
+        self.block_a.setParent(self)
+        #self.block_b = PreviousEntriesToFile(file=self.file)
 
         self.MainHBox = QHBoxLayout()
         self.MainHBox.addWidget(self.block_b)
@@ -53,15 +54,12 @@ class New_Entry(MainWindow):
         self.block_a.az.setText(self.az)
         self.block_a.mdt.setText(self.mdt)
         self.block_a.auftragsbezeichnung.setText(self.auftrag)
-        # self.timesheetModel = DBModelAuftraege()
 
         self.MainVerticalLayout.addLayout(self.MainHBox)
-        
         self.MainVerticalLayout.addLayout(self.block_a.vbox2)
 
         self.block_a.description.setStyleSheet("border-color:lightgray; border-style: solid; border-radius:4px;"
                                                         " border-width:1px")
-
         self.block_a.erfassen.clicked.connect(self.leistungserfassung)
 
     def closing(self):
@@ -70,10 +68,7 @@ class New_Entry(MainWindow):
     def leistungserfassung(self):
         self.ra = currentConfig.getcurrent_ra(currentConfig())
         self.lbeschreibung = self.block_a.description.toPlainText()
-        # self.file
         idx = self.block_a.duration.currentIndex()
-
-
 
         self.minutes = self.block_a.duration.itemData(idx)
         if self.block_a.billable.isChecked() == False:
@@ -97,10 +92,11 @@ class PreviousEntriesToFile(ArvenWidget):
         super(PreviousEntriesToFile, self).__init__("not")
         self.title = ArveLabel("header", "Vorherige Einträge in dieser Akte")
         self.file_entries = ArvenTable()
+        print("bq")
 
         self.file_entries.setStyleSheet("border-style: solid; border-radius: 4px; border-color: lightgray")
-        # model = PreviousEntriesFileProxy(file=self.file)
-        # self.file_entries.setModel(model)
+        model = PreviousEntriesFileProxy(file=self.file)
+        self.file_entries.setModel(model)
         for i in range(0, 14):
             self.file_entries.setColumnHidden(i, True)
         self.file_entries.setColumnHidden(5, False)
@@ -198,16 +194,6 @@ class EntryWidgets(ArvenWidget):
         self.setLayout(self.scrollGrid)
         self.fillduration()
 
-
-
     def fillduration(self):
         for key, value in intervalls15.items():
             self.duration.addItem(key, value)
-
-
-
-
-
-
-
-

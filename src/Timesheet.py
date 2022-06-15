@@ -1,116 +1,157 @@
 from src.MainLayout import *
 from PyQt6.QtWidgets import (QVBoxLayout,
                              QHBoxLayout,
-                             QTableView,
                              QAbstractItemView,
-                             QScrollArea,
-                             QCalendarWidget,
-                             QTextEdit,
-                             QSpinBox)
-from PyQt6 import QtCore
-from PyQt6.QtSql import (
-                            QSqlRelationalTableModel,
-                            QSqlRelation)
-from PyQt6.QtCore import pyqtSlot, QPoint
-from datetime import date, datetime, timedelta
+                             QCompleter)
 
-from src.data import LastFiles, PreviousEntriesFileProxy, Leistungen, DBModelAuftraege
-from src.InputHumans import Human
-from src.auftraege import SearchfieldAuftraege
-from src.config import last_files_update, currentConfig
+from PyQt6 import QtCore
+from PyQt6.QtGui import QRegularExpressionValidator
+from PyQt6.QtCore import QRegularExpression
+from src.data import DBModelAuftraege, MostRecentFiles, DBModelMdt, Auftragsauswahl
+from src.NewEntry import NewTimeEntry
 
 from src.auxiliary_gui import EmptyDelegate
-from src.variables import *
-from src.Leistunngserfassung import New_Entry
+from src.Leistungserfassung import New_Entry
 
-
+ergebnisModel = DBModelAuftraege()
 delegate = EmptyDelegate()
 
+def forwarding(packet:dict):
+    print(packet)
 
 
 class Timeframe(MainWindow):
     def __init__(self):
         super(Timeframe, self).__init__()
+        self._ts = None
+
         self.setWindowTitle("Zeiterfassung - Startseite")
 
-        self.block_a = SearchfieldAuftraege()
+        self.block_a = FindAuftrag()
+        self.block_a.setParent(self)
         self.block_b = CurrentFiles()
+        self.block_b.setParent(self)
         #self.block_c = CurrentAffairs()
 
-        self.block_a.ergebnisListe.doubleClicked.connect(self.openTimeSheet)
-        self.block_b.last_files.doubleClicked.connect(self.openTimeSheet)
-
+        self.block_a.ergebnisListe.clicked.connect(self.openNewTimeSheet)
+        self.block_b.last_files.clicked.connect(self.openPrevTimesheetInternal)
         self.MainHBlock = QHBoxLayout()
         self.VBlock = QVBoxLayout()
         self.VBlock1 = QVBoxLayout()
         self.VBlock.addWidget(self.block_a)
         self.VBlock.addWidget(self.block_b)
         
-        self.VBlock1.addSpacerItem(self.spacerV)  
-        #self.VBlock1.addWidget(self.block_c)
-      
+        self.VBlock1.addSpacerItem(self.spacerV)
 
         self.MainHBlock.addLayout(self.VBlock, 1)
         self.MainHBlock.addLayout(self.VBlock1, 2)
 
         self.MainVerticalLayout.addLayout(self.MainHBlock)
 
-    def openTimeSheet(self, index):
-        print(index)
-
+    def openPrevTimeSheet(self, index):
         if not index.sibling(index.row(), 0).data() is None:
             self.AuftrIndex = index.sibling(index.row(), 0).data()
         else:
             self.AuftrIndex = ''
 
-        if not index.sibling(index.row(), 4).data() is None:
-            self.az = index.sibling(index.row(), 4).data()
+        if not index.sibling(index.row(), 1).data() is None:
+            self.az = index.sibling(index.row(), 1).data()
         else:
             self.az = ''
-        if not index.sibling(index.row(), 1).data() is None:
-            self.mdt = index.sibling(index.row(), 1).data()
+
+        if not index.sibling(index.row(), 2).data() is None:
+            self.mdt = index.sibling(index.row(), 2).data()
         else:
             self.mdt = ''
-        if not index.sibling(index.row(), 5).data() is None:
-            self.auftrag = index.sibling(index.row(), 5).data()
+
+        if not index.sibling(index.row(), 3).data() is None:
+            self.auftrag = index.sibling(index.row(), 3).data()
+        else:
+            self.auftrag = ''
+
+        #self.packet = {'file': self.AuftrIndex, 'az': self.az, 'mdt': self.mdt, 'auftrag': self.auftrag}
+        self.selectAuftrag()
+
+    def openPrevTimesheetInternal(self, index):
+        if not index.sibling(index.row(), 0).data() is None:
+            self.AuftrIndex = index.sibling(index.row(), 0).data()
+        else:
+            self.AuftrIndex = ''
+
+        if not index.sibling(index.row(), 1).data() is None:
+            self.az = index.sibling(index.row(), 1).data()
+        else:
+            self.az = ''
+
+        if not index.sibling(index.row(), 2).data() is None:
+            self.mdt = index.sibling(index.row(), 2).data()
+        else:
+            self.mdt = ''
+
+        if not index.sibling(index.row(), 3).data() is None:
+            self.auftrag = index.sibling(index.row(), 3).data()
+        else:
+            self.auftrag = ''
+
+        #self.packet = {'file': self.AuftrIndex, 'az': self.az, 'mdt': self.mdt, 'auftrag': self.auftrag}
+        self.selectAuftragInternal()
+
+
+
+    def selectAuftrag(self):
+
+        self.timesheet = NewTimeEntry(file=self.AuftrIndex, az=self.az, mdt= self.mdt, auftrag=self.auftrag, parent=self)
+        self.timesheet.show()
+
+    def selectAuftragInternal(self):
+        if self._ts is None:
+            #for i in reversed(range(self.VBlock1.count())):
+            #    self.VBlock1.itemAt(i).widget().setParent(None)
+            self._ts = NewTimeEntry(file=self.AuftrIndex, az=self.az, mdt=self.mdt, auftrag=self.auftrag, parent=self)
+            self.VBlock1.addWidget(self._ts, 2)
+        else:
+            self.VBlock1.removeWidget(self._ts)
+            self._ts = NewTimeEntry(file=self.AuftrIndex, az=self.az, mdt=self.mdt, auftrag=self.auftrag, parent=self)
+            self.VBlock1.addWidget(self._ts, 2)
+
+
+
+    def openNewTimeSheet(self, index):
+        if not index.sibling(index.row(), 4).data() is None:
+            self.AuftrIndex = index.sibling(index.row(), 4).data()
+        else:
+            self.AuftrIndex = ''
+
+        if not index.sibling(index.row(), 0).data() is None:
+            self.az = index.sibling(index.row(), 0).data()
+        else:
+            self.az = ''
+        if not index.sibling(index.row(), 3).data() is None:
+            self.mdt = index.sibling(index.row(), 3).data()
+        else:
+            self.mdt = ''
+        if not index.sibling(index.row(), 1).data() is None:
+            self.auftrag = index.sibling(index.row(), 1).data()
         else:
             self.auftrag = ''
 
         self.packet = {'file': self.AuftrIndex, 'az': self.az, 'mdt': self.mdt, 'auftrag': self.auftrag}
+        self.selectAuftragInternal()
 
-        last_files_update(self.az)
-
-
-        New_Entry(**self.packet).show()
+    
 
 class CurrentFiles(ArvenWidget):
     def __init__(self):
         super(CurrentFiles, self).__init__(framed="not")
 
         self.last_files = ArvenTable()
-        self.last_files.setItemDelegateForColumn(5, delegate)
-        self.last_files.setItemDelegateForColumn(4, delegate)
-        self.last_files.setStyleSheet("border-style: solid; border-radius: 4px; border-color: lightgray")
-        model = DBModelAuftraege()
-        model.filter_last_files()
+        model = MostRecentFiles()
         self.last_files.setModel(model)
-        for i in range(0, 20):
-            self.last_files.setColumnHidden(i, True)
-        self.last_files.setColumnHidden(5, False)
-        self.last_files.setColumnHidden(4, False)
-        self.last_files.setColumnHidden(1, False)
-        self.last_files.verticalHeader().hide()
-        self.last_files.horizontalHeader().setStretchLastSection(True)
-        self.last_files.horizontalHeader().hide()
-        self.last_files.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
-        self.last_files.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.last_files.setWordWrap(True)
+        self.last_files.setColumnHidden(0, True)
+        self.last_files.setTextElideMode(Qt.TextElideMode.ElideNone)
         self.last_files.resizeRowsToContents()
 
-        self.last_files.setItemDelegateForColumn(1, delegate)
-        self.last_files.setItemDelegateForColumn(4, delegate)
-        self.last_files.setItemDelegateForColumn(5, delegate)
-
+        self.last_files.setItemDelegate(delegate)
         self.title = ArveLabel("header", "Meine zuletzt verwendeten Akten")
 
         self.VBox = QVBoxLayout()
@@ -126,198 +167,82 @@ class CurrentAffairs(ArvenWidget):
 
         pass
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+class FindAuftrag(ArvenWidget):
+    def __init__(self):
+        super(FindAuftrag, self).__init__(framed="framed")
+
+        self.searchMode1 = ArvenRadio("Mandant nach Namen auswählen", "checked")
+        self.searchMode1.toggled.connect(self.searchModeSelect)
+
+        self.searchMode2 = ArvenRadio("Mandant nach Nummer auswählen", "not")
+        self.searchMode2.toggled.connect(self.searchModeSelect)
+
+        self.searchModes = QHBoxLayout()
+        self.searchModes.addWidget(self.searchMode1)
+        self.searchModes.addWidget(self.searchMode2)
+
+
+
+        self.search_line = InputArve("Bitte Mandanten auswählen")
+        self.completer = QCompleter()
+        self.completer.setModel(DBModelMdt())
+        self.completer.setCompletionColumn(1)
+        self.completer.setCaseSensitivity(QtCore.Qt.CaseSensitivity.CaseInsensitive)
+
+        self.completer.activated[QtCore.QModelIndex].connect(self.indexmap)
+
+        self.ergebnisListe = ArvenTable()
+        self.ergebnisListe.setParent(self)
+
+        self.ergebnisListe.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.ergebnisListe.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+
+        self.vBox = QVBoxLayout(self)
+        self.vBox.addLayout(self.searchModes)
+        self.vBox.addWidget(self.search_line)
+        self.vBox.addWidget(self.ergebnisListe)
+        self.searchModeSelect()
+
+    def searchModeSelect(self):
+        if self.searchMode2.isChecked():
+            self.search_line.clear()
+            self.search_line.setPlaceholderText("Mandant nach Nummer auswählen")
+            limit = QRegularExpression("[0-9]*")
+            limiter = QRegularExpressionValidator(limit)
+            self.search_line.setValidator(limiter)
+            self.search_line.setCompleter(self.completer)
+            self.completer.setCompletionColumn(0)
+
+        else:
+            self.search_line.clear()
+            self.search_line.setCompleter(self.completer)
+            self.completer.setCompletionColumn(1)
+            self.search_line.setPlaceholderText("Bitte Mandanten auswählen")
+            self.search_line.setValidator(None)
+
+    @QtCore.pyqtSlot(QtCore.QModelIndex)
+    def indexmap(self, index):
+        self.MdtNrInt:int = index.sibling(index.row(), 0).data()
+        self.MdtName:str = index.sibling(index.row(), 1).data()
+        self.Auftragsliste(self.MdtName)
+        print(DBModelAuftraege.lastError(DBModelAuftraege()).text())
+
+
+    def Auftragsliste(self, MdtName:str):
+        self.model = Auftragsauswahl(MdtName)
+        self.ergebnisListe.setModel(self.model)
+        self.ergebnisListe.verticalHeader().hide()
+        self.ergebnisListe.horizontalHeader().setStretchLastSection(True)
+        self.ergebnisListe.horizontalHeader().hide()
+
+        self.ergebnisListe.setTextElideMode(Qt.TextElideMode.ElideNone)
+        self.ergebnisListe.resizeRowsToContents()
+        self.ergebnisListe.setColumnHidden(2, True)
+        self.ergebnisListe.setColumnHidden(3, True)
+        self.ergebnisListe.setColumnHidden(4, True)
+
+     # todo
+    #def updateModel(self):
+    #    self.model.dataChanged()
 
 
